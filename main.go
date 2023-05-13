@@ -10,6 +10,8 @@ import (
 	"time"
 )
 
+var pushTimeout = 10 * time.Second
+
 func main() {
 	if err := checkOS(); err != nil {
 		log.Fatalf("An error: %v", err)
@@ -41,7 +43,7 @@ func run(proj string, out io.Writer) error {
 	)
 	pipeline[3] = newTimeoutStep(
 		"git push", "git", "Git Push: SUCCESS", proj,
-		[]string{"push", "origin", "master"}, 10*time.Second,
+		[]string{"push", "origin", "master"}, pushTimeout,
 	)
 
 	for _, s := range pipeline {
