@@ -8,6 +8,7 @@ import (
 var (
 	ErrValidation    = errors.New("Validation failed")
 	ErrUnsupportedOs = errors.New("This OS is not supported")
+	ErrSignal        = errors.New("Recieved a signal")
 )
 
 type stepErr struct {

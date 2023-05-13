@@ -6,7 +6,9 @@ import (
 	"io"
 	"log"
 	"os"
+	"os/signal"
 	"runtime"
+	"syscall"
 	"time"
 )
 
@@ -46,19 +48,40 @@ func run(proj string, out io.Writer) error {
 		[]string{"push", "origin", "master"}, pushTimeout,
 	)
 
-	for _, s := range pipeline {
-		msg, err := s.execute()
-		if err != nil {
-			return err
-		}
+	sig := make(chan os.Signal, 1)
+	errCh := make(chan error)
+	done := make(chan struct{})
 
-		_, err = fmt.Fprintln(out, msg)
-		if err != nil {
+	signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM)
+
+	go func() {
+		for _, s := range pipeline {
+			msg, err := s.execute()
+			if err != nil {
+				errCh <- err
+				return
+			}
+
+			_, err = fmt.Fprintln(out, msg)
+			if err != nil {
+				errCh <- err
+				return
+			}
+		}
+		close(done)
+	}()
+
+	for {
+		select {
+		case rec := <-sig:
+			signal.Stop(sig)
+			return fmt.Errorf("%s: Exiting: %w", rec, ErrSignal)
+		case err := <-errCh:
 			return err
+		case <-done:
+			return nil
 		}
 	}
-
-	return nil
 }
 
 func checkOS() error {
