@@ -21,9 +21,11 @@ func (s exceptionStep) execute() (string, error) {
 	var out bytes.Buffer
 	cmd.Stdout = &out
 	cmd.Dir = s.proj
+	var errb bytes.Buffer
+	cmd.Stderr = &errb
 
 	if err := cmd.Run(); err != nil {
-		return "", &stepErr{step: s.name, msg: "failed to execute", cause: err}
+		return "", &stepErr{step: s.name, msg: fmt.Sprintf("failed to execute: %s", errb.String()), cause: err}
 	}
 
 	if out.Len() > 0 {

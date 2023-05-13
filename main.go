@@ -6,9 +6,15 @@ import (
 	"io"
 	"log"
 	"os"
+	"runtime"
+	"time"
 )
 
 func main() {
+	if err := checkOS(); err != nil {
+		log.Fatalf("An error: %v", err)
+	}
+
 	proj := flag.String("p", "", "Project directory")
 	flag.Parse()
 
@@ -22,7 +28,7 @@ func run(proj string, out io.Writer) error {
 		return fmt.Errorf("The project directory is required: %w", ErrValidation)
 	}
 
-	pipeline := make([]executer, 3)
+	pipeline := make([]executer, 4)
 
 	pipeline[0] = newStep(
 		"go build", "go", "Go Build: SUCCESS", proj, []string{"build", ".", "errors"},
@@ -32,6 +38,10 @@ func run(proj string, out io.Writer) error {
 	)
 	pipeline[2] = newExceptionStep(
 		"go fmt", "gofmt", "Gofmt: SUCCESS", proj, []string{"-l", "."},
+	)
+	pipeline[3] = newTimeoutStep(
+		"git push", "git", "Git Push: SUCCESS", proj,
+		[]string{"push", "origin", "master"}, 10*time.Second,
 	)
 
 	for _, s := range pipeline {
@@ -44,6 +54,14 @@ func run(proj string, out io.Writer) error {
 		if err != nil {
 			return err
 		}
+	}
+
+	return nil
+}
+
+func checkOS() error {
+	if runtime.GOOS == "windows" {
+		return ErrUnsupportedOs
 	}
 
 	return nil
